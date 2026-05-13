@@ -73,10 +73,13 @@
   .meta-strip .chip{display:inline-block;margin:2px 4px 0 0;padding:1px 5px;border-radius:4px;
     background:var(--panel-2);border:1px solid var(--border);font-size:10px;color:var(--text);}
   @media (max-width:640px){.meta-strip{grid-template-columns:repeat(3,1fr);}}
-  .meta-strip .meta-cell.expandable{cursor:pointer;position:relative;}
-  .meta-strip .meta-cell.expandable:hover{background:var(--panel-2);}
-  .meta-strip .meta-cell.expandable .val::after{content:" \25be";color:var(--muted);font-size:10px;margin-left:2px;}
-  .meta-strip .meta-cell.expandable[aria-expanded="true"] .val::after{content:" \25b4";}
+  .meta-strip .meta-cell.expandable{cursor:pointer;position:relative;
+    background:linear-gradient(180deg, var(--panel) 0%, rgba(88,166,255,0.04) 100%);}
+  .meta-strip .meta-cell.expandable .lbl::after{content:" 클릭▾";color:var(--accent);font-size:9px;font-weight:700;
+    margin-left:4px;letter-spacing:0;text-transform:none;}
+  .meta-strip .meta-cell.expandable[aria-expanded="true"] .lbl::after{content:" 닫기▴";}
+  .meta-strip .meta-cell.expandable:hover{background:rgba(88,166,255,0.12);}
+  .meta-strip .meta-cell.expandable:hover .lbl::after{color:#fff;background:var(--accent);padding:1px 4px;border-radius:3px;}
   .expand-panel{padding:10px 14px;background:var(--panel-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);max-height:280px;overflow-y:auto;font-size:11px;}
   .expand-panel .ep-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
   .expand-panel table{width:100%;border-collapse:collapse;}
@@ -200,6 +203,9 @@
   <span class="filter-tag" data-filter="dist-incomplete">분배 불완전</span>
 </div>
 
+<div style="padding:8px 12px;margin-bottom:12px;background:rgba(88,166,255,0.06);border:1px solid rgba(88,166,255,0.25);border-radius:6px;font-size:12px;color:var(--muted);">
+  💡 카드의 <b style="color:var(--accent)">CEX · 컨트랙트 · DEX</b> 셀을 클릭하면 상세 정보가 펼쳐집니다.
+</div>
 <div class="grid" id="grid"></div>
 
 <script>
