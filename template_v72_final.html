@@ -19,6 +19,16 @@
   h3{margin:0;}
   .subtitle{color:var(--muted);margin-bottom:16px;font-size:13px;}
 
+  .compare-wrap{overflow-x:auto;margin-bottom:16px;}
+  .compare-table{width:100%;background:var(--panel);min-width:880px;
+    border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:12px;}
+  .compare-table th,.compare-table td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+  .compare-table th{background:var(--panel-2);color:var(--muted);font-size:11px;
+    text-transform:uppercase;letter-spacing:0.5px;font-weight:600;cursor:pointer;}
+  .compare-table th.sorted{color:var(--accent);}
+  .compare-table tr:hover{background:var(--panel-2);}
+  .compare-table .rank-cell{font-weight:700;color:var(--accent);}
+
   .category-section{margin-bottom:24px;}
   .category-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 14px;
     background:var(--panel-2);border-radius:6px;border-left:4px solid;}
@@ -157,6 +167,20 @@
 <h1>카테고리별 픽 대시보드 <span style="color:var(--muted);font-size:14px">v7 · 텔레그램 사이드 정보 기반</span></h1>
 <div class="subtitle">9개 토큰 · 4 카테고리 · <span id="metaDate"></span> · 환율 <span id="metaFx"></span></div>
 
+<h3 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 8px;">토큰 간 비교 (정렬 가능)</h3>
+<div class="compare-wrap">
+<table class="compare-table">
+  <thead><tr id="compareHead">
+    <th data-col="rank">#</th><th data-col="symbol">심볼</th><th data-col="group">그룹</th>
+    <th data-col="category">카테고리(산업)</th><th data-col="circ_supply">유통량</th>
+    <th data-col="circ_pct">유통률</th><th data-col="market_cap">시총</th>
+    <th data-col="chain">체인</th><th data-col="contract">컨트랙트</th>
+    <th data-col="dex_liquidity">DEX 유동성</th>
+  </tr></thead>
+  <tbody id="compareBody"></tbody>
+</table>
+</div>
+
 <div id="categories"></div>
 
 <script>
@@ -194,6 +218,82 @@ function fmtPct(p) {
 function pctCls(p) { return p > 0 ? 'pos' : p < 0 ? 'neg' : ''; }
 const compactUsd = new Intl.NumberFormat('en-US', { notation:'compact', maximumFractionDigits:1 });
 const compactNum = new Intl.NumberFormat('en-US', { notation:'compact', maximumFractionDigits:2 });
+
+let tableSortCol = 'rank';
+let tableSortDir = 1;
+function renderCompareTable() {
+  // null 은 정렬 방향과 무관하게 항상 맨 끝
+  const cmpNum = (va, vb) => {
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    return (va - vb) * tableSortDir;
+  };
+  const cmpStr = (va, vb) => {
+    const sa = va || '', sb = vb || '';
+    if (!sa && !sb) return 0;
+    if (!sa) return 1;
+    if (!sb) return -1;
+    return sa.localeCompare(sb) * tableSortDir;
+  };
+  const sorted = [...DATA].sort((a,b) => {
+    const ma = a.meta_strip || {}, mb = b.meta_strip || {};
+    const ca = (ma.contracts || [])[0] || {}, cb = (mb.contracts || [])[0] || {};
+    switch (tableSortCol) {
+      case 'symbol':       return cmpStr(a.symbol, b.symbol);
+      case 'group':        return cmpStr(a.category_key, b.category_key);
+      case 'category':     return cmpStr(a.fund.category, b.fund.category);
+      case 'circ_supply':  return cmpNum(ma.circulating_supply, mb.circulating_supply);
+      case 'circ_pct':     return cmpNum(a.fund.circ_pct, b.fund.circ_pct);
+      case 'market_cap':   return cmpNum(ma.market_cap_usd, mb.market_cap_usd);
+      case 'chain':        return cmpStr(ca.chain_display || ca.chain, cb.chain_display || cb.chain);
+      case 'contract':     return cmpStr(ca.address, cb.address);
+      case 'dex_liquidity':return cmpNum(ma.dex_liquidity_usd, mb.dex_liquidity_usd);
+      default:             return cmpNum(a.fund.rank, b.fund.rank);
+    }
+  });
+  document.getElementById('compareBody').innerHTML = sorted.map(t => {
+    const f = t.fund || {};
+    const m = t.meta_strip || {};
+    const contracts = m.contracts || [];
+    const c0 = contracts[0];
+    const group = {candidate:'후보', insider:'인사이더', blue_chip:'블루칩', wildcard:'와일드카드'}[t.category_key] || t.category_key || '-';
+    const chainCell = c0
+      ? `${esc(c0.chain_display || c0.chain)}${contracts.length > 1 ? ` <span style="color:var(--muted);font-size:10px">+${contracts.length-1}</span>` : ''}`
+      : '<span style="color:var(--muted)">자체 메인넷</span>';
+    const contractCell = c0
+      ? (c0.explorer_url
+          ? `<a href="${safeUrl(c0.explorer_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:none">${esc(shortAddr(c0.address))}↗</a>`
+          : `<code style="font-size:11px">${esc(shortAddr(c0.address))}</code>`)
+      : '<span style="color:var(--muted)">-</span>';
+    const supply = m.circulating_supply != null ? compactNum.format(m.circulating_supply) : '-';
+    const circPct = f.circ_pct != null ? f.circ_pct + '%' : '-';
+    const mcap = m.market_cap_usd != null ? '$' + compactUsd.format(m.market_cap_usd) : '-';
+    const dexLiq = m.dex_liquidity_usd != null ? '$' + compactUsd.format(m.dex_liquidity_usd) : '<span style="color:var(--muted)">-</span>';
+    return `<tr>
+      <td class="rank-cell">#${f.rank ?? '-'}</td>
+      <td><b>${esc(t.symbol)}</b> ${t.bithumb_listed ? '✅' : '❌'} <span style="color:var(--muted)">${esc(t.korean)}</span></td>
+      <td>${group}</td>
+      <td>${esc(f.category || '-')}</td>
+      <td>${supply}</td>
+      <td>${circPct}</td>
+      <td>${mcap}</td>
+      <td>${chainCell}</td>
+      <td>${contractCell}</td>
+      <td>${dexLiq}</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('#compareHead th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === tableSortCol);
+  });
+}
+document.querySelectorAll('#compareHead th').forEach(th => {
+  th.addEventListener('click', () => {
+    if (tableSortCol === th.dataset.col) tableSortDir = -tableSortDir;
+    else { tableSortCol = th.dataset.col; tableSortDir = 1; }
+    renderCompareTable();
+  });
+});
 
 function distBar(dist) {
   if (!dist || dist.length === 0) return '<div style="color:var(--muted);font-size:11px">분배 정보 부재</div>';
@@ -359,6 +459,7 @@ function renderCategories() {
   });
 }
 
+renderCompareTable();
 renderCategories();
 
 const FMT_USD = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',notation:'compact',maximumFractionDigits:1});
