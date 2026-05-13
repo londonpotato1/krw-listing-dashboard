@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>카테고리별 픽 대시보드 v7 (텔레그램 사이드 정보)</title>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root {
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c2128; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --green:#26a69a; --red:#ef5350;
+    --accent:#58a6ff; --gold:#ffc107; --orange:#f97316; --purple:#a78bfa;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Pretendard",sans-serif;
+    font-size:14px;line-height:1.5;}
+  h1{margin:0 0 4px;font-size:26px;}
+  h2{margin:32px 0 12px;font-size:20px;padding-bottom:8px;border-bottom:2px solid var(--border);}
+  h3{margin:0;}
+  .subtitle{color:var(--muted);margin-bottom:16px;font-size:13px;}
+
+  .category-section{margin-bottom:24px;}
+  .category-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 14px;
+    background:var(--panel-2);border-radius:6px;border-left:4px solid;}
+  .category-header.cat-candidate{border-color:var(--accent);}
+  .category-header.cat-insider{border-color:var(--red);}
+  .category-header.cat-blue_chip{border-color:var(--green);}
+  .category-header.cat-wildcard{border-color:var(--purple);}
+  .category-header h3{font-size:16px;}
+  .category-header .desc{color:var(--muted);font-size:12px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(380px,1fr));gap:16px;}
+  @media (max-width:480px){
+    body{padding:12px;}
+    .grid{grid-template-columns:1fr;}
+    h1{font-size:20px;}
+  }
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+    display:flex;flex-direction:column;}
+  .card:hover{border-color:var(--accent);}
+
+  .card-header{padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;
+    border-bottom:1px solid var(--border);}
+  .card-title h3{font-size:18px;}
+  .card-title .kor{color:var(--muted);font-size:13px;margin-top:2px;}
+  .card-title .listing{color:var(--muted);font-size:11px;margin-top:4px;}
+  .card-tags{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+  .rank-tag{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;color:#fff;}
+  .rank-1,.rank-2,.rank-3{background:#dc2626;}
+  .rank-4,.rank-5{background:#f97316;}
+  .rank-6{background:#f59e0b;}
+  .rank-7{background:#3b82f6;}
+  .rank-8,.rank-9,.rank-10{background:#26a69a;}
+  .listed-tag{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(38,166,154,0.15);color:var(--green);border:1px solid var(--green);}
+  .unlisted-tag{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(139,148,158,0.12);color:var(--muted);border:1px solid var(--muted);}
+
+  .meta-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);
+    border-bottom:1px solid var(--border);font-size:11px;}
+  .meta-strip .meta-cell{min-width:0;background:var(--panel);padding:8px 10px;}
+  .meta-strip .lbl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.4px;}
+  .meta-strip .val{margin-top:2px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .meta-strip .chip{display:inline-block;margin:2px 4px 0 0;padding:1px 5px;border-radius:4px;
+    background:var(--panel-2);border:1px solid var(--border);font-size:10px;color:var(--text);}
+  @media (max-width:640px){.meta-strip{grid-template-columns:repeat(3,1fr);}}
+  .meta-strip .meta-cell.expandable{cursor:pointer;position:relative;}
+  .meta-strip .meta-cell.expandable:hover{background:var(--panel-2);}
+  .meta-strip .meta-cell.expandable .val::after{content:" \25be";color:var(--muted);font-size:10px;margin-left:2px;}
+  .meta-strip .meta-cell.expandable[aria-expanded="true"] .val::after{content:" \25b4";}
+  .expand-panel{padding:10px 14px;background:var(--panel-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);max-height:280px;overflow-y:auto;font-size:11px;}
+  .expand-panel .ep-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .expand-panel table{width:100%;border-collapse:collapse;}
+  .expand-panel th,.expand-panel td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;}
+  .expand-panel th{color:var(--muted);font-weight:600;font-size:10px;text-transform:uppercase;}
+  .expand-panel a{color:var(--accent);text-decoration:none;}
+  .expand-panel a:hover{text-decoration:underline;}
+  .expand-panel .cat-spot_assumed{color:var(--accent);font-size:10px;}
+  .expand-panel .cat-derivative_assumed{color:var(--orange);font-size:10px;}
+  .expand-panel .cat-unknown{color:var(--muted);font-size:10px;}
+  .expand-panel .empty{color:var(--muted);font-style:italic;padding:4px 0;}
+  .expand-panel .note{color:var(--orange);font-size:10px;margin-top:6px;}
+
+
+  .critical-banner{padding:10px 16px;background:rgba(239,83,80,0.18);
+    border-bottom:1px solid var(--red);color:var(--text);font-size:12px;}
+  .critical-banner .sev{font-weight:700;color:var(--red);margin-right:6px;}
+
+  .rank-reason{padding:10px 16px;background:var(--panel-2);
+    border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);
+    border-left:3px solid var(--accent);}
+  .rank-reason b{color:var(--text);}
+
+  .kimchi-banner{padding:8px 16px;font-size:12px;border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;}
+  .kimchi-pos{background:rgba(38,166,154,0.08);}
+  .kimchi-neg{background:rgba(239,83,80,0.06);}
+  .kimchi-neutral{background:var(--panel-2);}
+  .kimchi-missing{background:rgba(139,148,158,0.08);color:var(--muted);}
+  .kimchi-banner .lbl{color:var(--muted);font-size:11px;}
+  .kimchi-banner .v{font-weight:700;}
+  .pos{color:var(--green);} .neg{color:var(--red);}
+
+  .price-row{display:grid;grid-template-columns:repeat(4,1fr);padding:12px 16px;gap:8px;
+    border-bottom:1px solid var(--border);}
+  .price-cell .lbl{color:var(--muted);font-size:11px;}
+  .price-cell .v{font-size:14px;font-weight:600;margin-top:2px;}
+
+  .ath-row{padding:6px 16px;font-size:11px;color:var(--muted);
+    display:flex;justify-content:space-between;border-bottom:1px solid var(--border);}
+  .ath-row b{color:var(--text);}
+
+  .chart-wrap{padding:8px 12px 4px;}
+  .chart-box{width:100%;height:160px;}
+  .chart-placeholder{padding:20px;text-align:center;color:var(--muted);font-size:12px;background:var(--panel-2);border-radius:6px;margin:8px 12px 4px;}
+
+  .fund-section{padding:12px 16px;border-top:1px solid var(--border);}
+  .fund-section h4{color:var(--muted);font-size:11px;text-transform:uppercase;
+    letter-spacing:0.5px;margin:8px 0 6px;}
+  .fund-section h4:first-child{margin-top:0;}
+  .fund-desc{font-size:13px;line-height:1.5;margin-bottom:6px;}
+  .fund-meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;}
+  .fund-meta .k{color:var(--muted);}
+
+  .dist-bar{display:flex;height:18px;border-radius:4px;overflow:hidden;margin:6px 0;
+    border:1px solid var(--border);}
+  .dist-seg{font-size:9px;color:#fff;padding:2px 4px;white-space:nowrap;overflow:hidden;
+    text-align:center;line-height:14px;font-weight:600;}
+  .dist-legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11px;}
+  .dist-legend .leg{display:flex;align-items:center;gap:4px;}
+  .dist-legend .sw{width:10px;height:10px;border-radius:2px;}
+  .dist-warn{font-size:11px;color:var(--orange);margin-top:4px;}
+
+  .timeline-list, .roadmap-list{list-style:none;padding:0;margin:0;font-size:12px;}
+  .timeline-list li, .roadmap-list li{padding:3px 0 3px 12px;border-left:2px solid var(--border);
+    margin-left:4px;}
+  .timeline-list .d, .roadmap-list .d{color:var(--accent);font-weight:600;margin-right:6px;}
+
+  .flags{padding:0 16px 14px;}
+  .flag{padding:6px 10px;border-radius:6px;font-size:11px;margin-top:6px;
+    display:flex;gap:8px;align-items:flex-start;}
+  .flag-Critical{background:rgba(239,83,80,0.12);border-left:3px solid var(--red);}
+  .flag-Major{background:rgba(249,115,22,0.10);border-left:3px solid var(--orange);}
+  .flag-Minor{background:rgba(255,193,7,0.08);border-left:3px solid var(--gold);}
+  .flag .sev{font-weight:700;font-size:10px;text-transform:uppercase;flex-shrink:0;}
+
+  .sources{padding:8px 16px 14px;font-size:11px;color:var(--muted);}
+  .sources a{color:var(--accent);text-decoration:none;margin-right:8px;}
+
+  details summary{cursor:pointer;color:var(--accent);font-size:12px;
+    padding:6px 10px;background:var(--panel-2);border-radius:6px;list-style:none;margin:0 16px;}
+  details summary::before{content:"▸ ";}
+  details[open] summary::before{content:"▾ ";}
+
+</style>
+</head>
+<body>
+
+<h1>카테고리별 픽 대시보드 <span style="color:var(--muted);font-size:14px">v7 · 텔레그램 사이드 정보 기반</span></h1>
+<div class="subtitle">9개 토큰 · 4 카테고리 · <span id="metaDate"></span> · 환율 <span id="metaFx"></span></div>
+
+<div id="categories"></div>
+
+<script>
+const PAYLOAD = __DATA__;
+const DATA = PAYLOAD.tokens;
+const META = PAYLOAD.meta;
+const GROUPS = PAYLOAD.category_groups;
+const DIST_COLORS = ['#58a6ff','#26a69a','#ffc107','#f97316','#ef5350','#a78bfa','#06b6d4','#84cc16','#e879f9','#94a3b8'];
+
+document.getElementById('metaDate').textContent = META.research_date;
+document.getElementById('metaFx').textContent = `USD/KRW ${META.fx_rate}`;
+
+// XSS 방어: innerHTML 데이터 주입 시 HTML escape
+const _ESC = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+function esc(s){ return s == null ? '' : String(s).replace(/[&<>"']/g, c => _ESC[c]); }
+// URL scheme allowlist: http/https/mailto만 허용
+function safeUrl(u){
+  if (!u) return 'about:blank';
+  const s = String(u).trim();
+  return /^(https?:|mailto:)/i.test(s) ? s : 'about:blank';
+}
+
+function fmtPrice(p) {
+  if (p == null) return '-';
+  if (p >= 1000) return p.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (p >= 100) return p.toFixed(1);
+  if (p >= 10) return p.toFixed(2);
+  if (p >= 1) return p.toFixed(3);
+  return p.toFixed(4);
+}
+function fmtPct(p) {
+  if (p == null) return '-';
+  return (p > 0 ? '+' : '') + p.toFixed(1) + '%';
+}
+function pctCls(p) { return p > 0 ? 'pos' : p < 0 ? 'neg' : ''; }
+const compactUsd = new Intl.NumberFormat('en-US', { notation:'compact', maximumFractionDigits:1 });
+const compactNum = new Intl.NumberFormat('en-US', { notation:'compact', maximumFractionDigits:2 });
+
+function distBar(dist) {
+  if (!dist || dist.length === 0) return '<div style="color:var(--muted);font-size:11px">분배 정보 부재</div>';
+  const total = dist.reduce((s, [, p]) => s + p, 0) || 100;
+  let bar = `<div class="dist-bar">`;
+  let legend = `<div class="dist-legend">`;
+  dist.forEach(([name, pct], i) => {
+    const c = DIST_COLORS[i % DIST_COLORS.length];
+    const width = (pct / total * 100).toFixed(2);
+    bar += `<div class="dist-seg" style="width:${width}%;background:${c}" title="${name} ${pct}%">${pct >= 10 ? pct + '%' : ''}</div>`;
+    legend += `<div class="leg"><span class="sw" style="background:${c}"></span>${name} ${pct}%</div>`;
+  });
+  bar += `</div>`;
+  legend += `</div>`;
+  return bar + legend;
+}
+
+function renderCard(t) {
+  const f = t.fund || {};
+  const criticalFlags = (f.flags || []).filter(([s]) => s === 'Critical');
+  const otherFlags = (f.flags || []).filter(([s]) => s !== 'Critical');
+  const criticalBanner = criticalFlags.map(([sev, msg]) =>
+    `<div class="critical-banner"><span class="sev">CRITICAL</span>${msg}</div>`
+  ).join('');
+  const k = f.kimchi || {};
+  let kimchiBanner = '';
+  if (k.kimchi_pct != null) {
+    const cls = Math.abs(k.kimchi_pct) < 1 ? 'kimchi-neutral' : k.kimchi_pct > 0 ? 'kimchi-pos' : 'kimchi-neg';
+    kimchiBanner = `<div class="kimchi-banner ${cls}">
+      <span class="lbl">실측 김프 (vs 글로벌)</span>
+      <span class="v ${pctCls(k.kimchi_pct)}">${fmtPct(k.kimchi_pct)} <span style="color:var(--muted);font-weight:400;font-size:10px">[빗썸 ₩${k.bithumb_krw} vs 글로벌 $${k.global_usd}]</span></span>
+    </div>`;
+  } else {
+    kimchiBanner = `<div class="kimchi-banner kimchi-missing">
+      <span class="lbl">실측 김프</span>
+      <span class="v">${k.note || '미상장'}</span>
+    </div>`;
+  }
+  const listedTag = t.bithumb_listed ? '<span class="listed-tag">빗썸 KRW</span>' : '<span class="unlisted-tag">미상장</span>';
+  const tl = (f.timeline || []).map(([d,e]) => `<li><span class="d">${d}</span>${e}</li>`).join('');
+  const rm = (f.roadmap || []).map(([d,e]) => `<li><span class="d">${d}</span>${e}</li>`).join('');
+  const flagsHtml = otherFlags.map(([sev, msg]) =>
+    `<div class="flag flag-${sev}"><span class="sev">${sev}</span><span>${msg}</span></div>`
+  ).join('');
+  const meta = t.meta_strip || {};
+  const cexHtml = (meta.cex_tickers_top5 || []).map(x => `<span class="chip">${x.market || x.identifier || '-'}</span>`).join('') || '-';
+  const contract = (meta.contracts || [])[0];
+  const contractHtml = contract ? `${contract.chain}: ${contract.address.slice(0, 6)}…${contract.address.slice(-4)}` : '-';
+  const sourcesHtml = (f.sources || []).map(([name, url]) =>
+    `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${esc(name)}↗</a>`
+  ).join('');
+  const distWarn = f.dist_sum < 100 ?
+    `<div class="dist-warn">⚠ 분배 합계 ${f.dist_sum}% (미배정 ${(100-f.dist_sum).toFixed(2)}%)</div>` : '';
+
+  let priceRow, athRow, chartHtml;
+  if (t.bithumb_listed && t.last_price) {
+    priceRow = `<div class="price-row">
+      <div class="price-cell"><div class="lbl">상장가</div><div class="v">₩${fmtPrice(t.list_price)}</div></div>
+      <div class="price-cell"><div class="lbl">현재가</div><div class="v">₩${fmtPrice(t.last_price)}</div></div>
+      <div class="price-cell"><div class="lbl">90일比</div><div class="v ${pctCls(t.from_listing)}">${fmtPct(t.from_listing)}</div></div>
+      <div class="price-cell"><div class="lbl">90일ATH比</div><div class="v ${pctCls(t.from_ath)}">${fmtPct(t.from_ath)}</div></div>
+    </div>`;
+    athRow = `<div class="ath-row"><span>빗썸 90일 ATH <b>₩${fmtPrice(t.ath)}</b> (${t.ath_day})</span><span>유통률 <b>${f.circ_pct}%</b></span></div>`;
+    chartHtml = `<div class="chart-wrap"><div class="chart-box" id="chart-${t.symbol}"></div></div>`;
+  } else {
+    priceRow = `<div class="price-row" style="grid-template-columns:repeat(2,1fr)">
+      <div class="price-cell"><div class="lbl">글로벌 USD</div><div class="v">$${f.kimchi?.global_usd || '-'}</div></div>
+      <div class="price-cell"><div class="lbl">유통률</div><div class="v">${f.circ_pct ?? '-'}%</div></div>
+    </div>`;
+    athRow = '';
+    chartHtml = '<div class="chart-placeholder">빗썸 미상장 — 캔들 차트 없음</div>';
+  }
+
+  return `<div class="card" id="card-${t.symbol}" data-symbol="${t.symbol}">
+    <div class="card-header">
+      <div class="card-title">
+        <h3>${t.symbol} <span style="color:var(--muted);font-weight:400;font-size:14px">${t.korean || ''}</span></h3>
+        <div class="kor">${f.category || ''}</div>
+        ${t.listing ? `<div class="listing">90일 시작 ${t.listing}</div>` : ''}
+      </div>
+      <div class="card-tags">
+        <span class="rank-tag rank-${f.rank}">랭킹 ${f.rank}/10</span>
+        ${listedTag}
+      </div>
+    </div>
+    <div class="meta-strip">
+      <div class="meta-cell"><div class="lbl">시총</div><div class="val">${meta.market_cap_usd == null ? '-' : '$' + compactUsd.format(meta.market_cap_usd)}</div></div>
+      <div class="meta-cell"><div class="lbl">거래량</div><div class="val">${meta.total_volume_usd == null ? '-' : '$' + compactUsd.format(meta.total_volume_usd)}</div></div>
+      <div class="meta-cell"><div class="lbl">유통량</div><div class="val">${meta.circulating_supply == null ? '-' : compactNum.format(meta.circulating_supply)}</div></div>
+      <div class="meta-cell expandable" data-key="cex"><div class="lbl">CEX</div><div class="val">${cexHtml}</div></div>
+      <div class="meta-cell expandable" data-key="contract"><div class="lbl">컨트랙트</div><div class="val">${contractHtml}</div></div>
+      <div class="meta-cell expandable" data-key="dex"><div class="lbl">DEX</div><div class="val">${meta.dex_liquidity_usd == null ? '-' : '$' + compactUsd.format(meta.dex_liquidity_usd)}</div></div>
+    </div>
+    ${criticalBanner}
+    <div class="rank-reason"><b>랭킹 ${f.rank}:</b> ${f.rank_reason || ''}</div>
+    ${kimchiBanner}
+    ${priceRow}
+    ${athRow}
+    ${chartHtml}
+    <details>
+      <summary>펀더멘털 상세 (분배/타임라인/로드맵)</summary>
+      <div class="fund-section">
+        <h4>프로젝트</h4>
+        <div class="fund-desc">${f.description || ''}</div>
+        <div class="fund-meta">
+          <span class="k">최대 공급</span><span>${f.max_supply || '-'}</span>
+          <span class="k">베스팅</span><span>${f.vesting || '-'}</span>
+          <span class="k">유틸리티</span><span>${f.utility || '-'}</span>
+          <span class="k">다음 언락</span><span style="color:var(--orange)">${f.next_unlock || '-'}</span>
+        </div>
+        <h4>분배 구조 ${f.dist_sum >= 100 ? '<span style="color:var(--green);font-size:10px">✓ 100%</span>' : ''}</h4>
+        ${distBar(f.distribution)}
+        ${distWarn}
+        ${tl ? `<h4>타임라인</h4><ul class="timeline-list">${tl}</ul>` : ''}
+        ${rm ? `<h4>로드맵</h4><ul class="roadmap-list">${rm}</ul>` : ''}
+      </div>
+    </details>
+    ${flagsHtml ? `<div class="flags">${flagsHtml}</div>` : ''}
+    ${sourcesHtml ? `<div class="sources"><b style="color:var(--muted)">출처:</b> ${sourcesHtml}</div>` : ''}
+  </div>`;
+}
+
+function renderCategories() {
+  const container = document.getElementById('categories');
+  GROUPS.forEach(g => {
+    const groupTokens = DATA.filter(t => t.category_key === g.key);
+    if (groupTokens.length === 0) return;
+    const section = document.createElement('div');
+    section.className = 'category-section';
+    section.innerHTML = `
+      <div class="category-header cat-${g.key}">
+        <h3>${g.label}</h3>
+        <span class="desc">${g.listing_filter} · ${groupTokens.length}종</span>
+      </div>
+      <div class="grid">${groupTokens.map(renderCard).join('')}</div>
+    `;
+    container.appendChild(section);
+    groupTokens.forEach(t => {
+      const card = section.querySelector(`[data-symbol="${t.symbol}"]`);
+      if (card) attachExpand(card, t.meta_strip);
+    });
+  });
+  // 캔들 차트 렌더 (빗썸 상장 토큰만)
+  DATA.forEach(t => {
+    if (!t.bithumb_listed || !t.candles || t.candles.length === 0) return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById('chart-' + t.symbol);
+      if (!el) return;
+      const chart = LightweightCharts.createChart(el, {
+        layout:{background:{color:'#161b22'}, textColor:'#8b949e'},
+        grid:{vertLines:{color:'#21262d'}, horzLines:{color:'#21262d'}},
+        rightPriceScale:{borderColor:'#30363d'},
+        timeScale:{borderColor:'#30363d', timeVisible:false},
+        crosshair:{mode:0}, autoSize:true,
+      });
+      const ls = chart.addLineSeries({color:'#58a6ff', lineWidth:2});
+      ls.setData(t.candles);
+      const vs = chart.addHistogramSeries({priceFormat:{type:'volume'}, priceScaleId:'vol', color:'#26a69a'});
+      vs.priceScale().applyOptions({scaleMargins:{top:0.8, bottom:0}});
+      vs.setData(t.volumes);
+      chart.timeScale().fitContent();
+    });
+  });
+}
+
+renderCategories();
+
+const FMT_USD = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',notation:'compact',maximumFractionDigits:1});
+const FMT_NUM = new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1});
+
+function shortAddr(a){ return a && a.length > 10 ? a.slice(0,6) + '...' + a.slice(-4) : (a||''); }
+
+function catLabel(c){
+  if (c === 'derivative_assumed') return '선물 추정';
+  if (c === 'spot_assumed') return '현물 추정';
+  return '구분 불명';
+}
+
+function renderCexPanel(meta){
+  const list = meta.cex_tickers_top5 || [];
+  if (list.length === 0) return '<div class="empty">CEX 데이터 없음</div>';
+  const rows = list.map(t => {
+    const cat = t.category || 'unknown';
+    const vol = t.volume_usd != null ? '$' + FMT_USD.format(t.volume_usd).replace('$','') : '-';
+    const price = t.last_usd != null ? '$' + Number(t.last_usd).toPrecision(4) : '-';
+    return `<tr><td>${t.market||'-'}</td><td>${t.pair||'-'}</td><td><span class="cat-${cat}">${catLabel(cat)}</span></td><td>${price}</td><td>${vol}</td></tr>`;
+  }).join('');
+  return `<div class="ep-title">CEX 상위 5 (거래량 순) — 현물/선물 추정 라벨</div>
+    <table><thead><tr><th>거래소</th><th>거래쌍</th><th>유형</th><th>가격</th><th>24h 거래량</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="note">⚠ 현물/선물은 거래쌍 패턴/거래소 ID 기반 추정. 단정 분류 아님</div>`;
+}
+
+function renderContractPanel(meta){
+  const list = meta.contracts || [];
+  if (list.length === 0) return '<div class="empty">컨트랙트 데이터 없음 (자체 메인넷 또는 미공개)</div>';
+  const rows = list.map(c => {
+    const display = c.chain_display || c.chain || '-';
+    const addr = c.address || '';
+    const link = c.explorer_url ? `<a href="${safeUrl(c.explorer_url)}" target="_blank" rel="noopener noreferrer">${esc(shortAddr(addr))}↗</a>` : esc(shortAddr(addr));
+    return `<tr><td>${display}</td><td>${link}</td><td><code style="font-size:10px;color:var(--muted)">${addr}</code></td></tr>`;
+  }).join('');
+  return `<div class="ep-title">컨트랙트 (체인별)</div>
+    <table><thead><tr><th>체인</th><th>Explorer</th><th>주소</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderDexPanel(meta){
+  const liq = meta.dex_liquidity_usd;
+  const pool = meta.dex_top_pool;
+  const note = meta.dex_note;
+  if (note) return `<div class="ep-title">DEX 유동성</div><div class="note">⚠ ${note}</div>`;
+  if (liq == null) return '<div class="empty">DEX 데이터 없음 (DEX Screener 미지원 체인 또는 유동성 부재)</div>';
+  const usd = '$' + FMT_USD.format(liq).replace('$','');
+  const link = pool ? `<a href="https://dexscreener.com/search?q=${pool}" target="_blank" rel="noopener noreferrer">DEX Screener 풀 ${shortAddr(pool)}↗</a>` : '';
+  return `<div class="ep-title">DEX 유동성 (DEX Screener 최대 풀)</div>
+    <table><tr><td>총 유동성</td><td><b>${usd}</b></td></tr><tr><td>풀 주소</td><td>${link}</td></tr></table>`;
+}
+
+function attachExpand(card, meta){
+  if (!meta) return;
+  const cells = card.querySelectorAll('.meta-strip .meta-cell.expandable');
+  let panel = null;
+  cells.forEach(cell => {
+    cell.setAttribute('role', 'button');
+    cell.setAttribute('tabindex', '0');
+    cell.setAttribute('aria-expanded', 'false');
+    const handler = () => {
+      const key = cell.dataset.key;
+      const wasExpanded = cell.getAttribute('aria-expanded') === 'true';
+      cells.forEach(c => c.setAttribute('aria-expanded', 'false'));
+      if (panel) { panel.remove(); panel = null; }
+      if (!wasExpanded) {
+        cell.setAttribute('aria-expanded', 'true');
+        panel = document.createElement('div');
+        panel.className = 'expand-panel';
+        if (key === 'cex') panel.innerHTML = renderCexPanel(meta);
+        else if (key === 'contract') panel.innerHTML = renderContractPanel(meta);
+        else if (key === 'dex') panel.innerHTML = renderDexPanel(meta);
+        card.querySelector('.meta-strip').insertAdjacentElement('afterend', panel);
+      }
+    };
+    cell.addEventListener('click', handler);
+    cell.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
+  });
+}
+
+</script>
+</body>
+</html>

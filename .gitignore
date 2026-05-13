@@ -1,0 +1,45 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# 옛 버전 (v2-v5, v7-별개)
+dashboard.html
+dashboard_v2.html
+dashboard_v3.html
+dashboard_v4.html
+dashboard_v5.html
+dashboard_v7.html
+dashboard_v72.html
+dashboard_unified.html
+dashboard_data.json
+dashboard_data_v4.min.json
+dashboard_data_v4_verified.min.json
+dashboard_data_v5.min.json
+dashboard_data_v5_verified.min.json
+dashboard_data_v7_verified.min.json
+dashboard_data_v72_verified.min.json
+build_dashboard_v4.py
+build_dashboard_v5.py
+
+# 개발/리뷰 로그
+REVIEW_*.md
+RESEARCH.md
+REPORT.md
+PRICE_REPORT.md
+ACTIONS.md
+final_list.json
+
+# 캐시
+cache/
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+
+# 임시 파일
+*.log
+*.tmp
+.env
+.env.local

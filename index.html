@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KRW 신규상장 대시보드</title>
+<style>
+  :root {
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c2128; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#26a69a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:32px 20px;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Pretendard",sans-serif;
+    font-size:15px;line-height:1.6;}
+  .wrap{max-width:760px;margin:0 auto;}
+  h1{font-size:28px;margin:0 0 8px;}
+  .subtitle{color:var(--muted);font-size:14px;margin-bottom:32px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:20px 22px;margin-bottom:16px;transition:border-color 0.15s;}
+  .card:hover{border-color:var(--accent);}
+  .card h2{margin:0 0 6px;font-size:18px;color:var(--accent);}
+  .card h2 a{color:inherit;text-decoration:none;}
+  .card h2 a:hover{text-decoration:underline;}
+  .card .desc{color:var(--muted);font-size:13px;margin-bottom:10px;}
+  .card .meta{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);}
+  .card .meta span{padding:2px 8px;background:var(--panel-2);border:1px solid var(--border);border-radius:4px;}
+  .disclaimer{margin-top:32px;padding:14px 16px;background:var(--panel);
+    border-left:3px solid var(--muted);font-size:12px;color:var(--muted);line-height:1.7;border-radius:4px;}
+  .disclaimer b{color:var(--text);}
+  a.btn{display:inline-block;margin-top:8px;padding:6px 14px;background:var(--accent);
+    color:#fff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600;}
+  a.btn:hover{opacity:0.9;}
+  @media (max-width:480px){
+    body{padding:16px 12px;}
+    h1{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📊 KRW 신규상장 대시보드</h1>
+  <div class="subtitle">빗썸 단독 KRW 신규상장 토큰 분석 · 2026-05-13 스냅샷</div>
+
+  <div class="card">
+    <h2><a href="dashboard_v6.html">v6 · 빗썸 KRW 신규상장 8종</a></h2>
+    <div class="desc">최근 빗썸 단독 KRW 신규상장 8개 토큰. 김프·유통률·언락 스케줄·펀더멘털 비교.</div>
+    <div class="meta">
+      <span>토큰 8</span>
+      <span>실측 환율 기반 김프</span>
+      <span>분배 검증 완료</span>
+    </div>
+    <a class="btn" href="dashboard_v6.html">대시보드 열기 →</a>
+  </div>
+
+  <div class="card">
+    <h2><a href="dashboard_v72_final.html">v7.2 · 카테고리별 픽 9종</a></h2>
+    <div class="desc">텔레그램 사이드 정보 기반 4 카테고리 분류 (원상 후보 / 내부자 의혹 / 펀더멘털 우량 / 뜬금픽).</div>
+    <div class="meta">
+      <span>토큰 9</span>
+      <span>4 카테고리</span>
+      <span>다단 검증 통과</span>
+    </div>
+    <a class="btn" href="dashboard_v72_final.html">대시보드 열기 →</a>
+  </div>
+
+  <div class="disclaimer">
+    <b>면책 조항</b> · 본 대시보드는 공개 데이터(CoinGecko / DEX Screener / 거래소 공식 공시) 를 가공한
+    개인 분석 자료입니다. 투자 권유가 아니며, 데이터 정확성을 보장하지 않습니다.
+    토큰 가격·언락 스케줄·김프는 데이터 수집 시점 기준이며 현재 시세와 다를 수 있습니다.
+    투자 판단의 모든 책임은 본인에게 있습니다.
+  </div>
+</div>
+</body>
+</html>
