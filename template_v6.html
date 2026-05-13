@@ -174,7 +174,7 @@
 <body>
 
 <h1>2026 빗썸 단독 KRW 신규상장 대시보드 <span style="color:var(--muted);font-size:14px">v6 · 빌드 시점 자동 검증 + 실측 환율</span></h1>
-<div class="subtitle">8개 토큰 · <span id="metaDate"></span> · 환율 <span id="metaFx"></span></div>
+<div class="subtitle">8개 토큰 · <span id="metaDate"></span> · 환율 <span id="metaFx"></span> · <span id="liveStatus" style="color:var(--muted);font-size:12px"></span></div>
 
 <h3 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 8px;">📊 토큰 간 비교 (정렬 가능)</h3>
 <div class="compare-wrap">
@@ -216,6 +216,24 @@ const DIST_COLORS = ['#58a6ff','#26a69a','#ffc107','#f97316','#ef5350','#a78bfa'
 
 document.getElementById('metaDate').textContent = META.research_date;
 document.getElementById('metaFx').textContent = `USD/KRW ${META.fx_rate}`;
+
+// 실시간 데이터 갱신 상태 (GitHub Actions 30분 cron)
+(function(){
+  const live = META.live || {};
+  const ts = live.last_success_at;
+  const el = document.getElementById('liveStatus');
+  if (!ts) { el.innerHTML = '<span style="color:var(--muted)">데이터: 정적 스냅샷</span>'; return; }
+  function render(){
+    const diffMin = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+    let txt, color;
+    if (diffMin < 60)       { txt = `데이터 ${diffMin}분 전 갱신`;        color = 'var(--green)'; }
+    else if (diffMin < 180) { txt = `데이터 ${Math.floor(diffMin/60)}시간 전 갱신`; color = 'var(--gold)'; }
+    else                    { txt = `⚠ 갱신 지연 (${Math.floor(diffMin/60)}시간 이상)`;     color = 'var(--orange)'; }
+    el.innerHTML = `<span style="color:${color}" title="배치: ${ts}">🔄 ${txt}</span>`;
+  }
+  render();
+  setInterval(render, 60000);  // 1분마다 텍스트 재계산 (페이지 자체는 fetch 안 함 — Actions 가 갱신)
+})();
 
 // XSS 방어: innerHTML 데이터 주입 시 HTML escape
 const _ESC = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};

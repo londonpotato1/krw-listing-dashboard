@@ -42,12 +42,22 @@ python3 build_dashboard_v7.py   # → dashboard_v72_final.html
 
 빌드는 멱등 (두 번 실행해도 md5 동일).
 
-## 데이터 출처
+## 데이터 출처 + 실시간 갱신
 
-- 가격: CoinGecko, 거래소 공식 API
-- 컨트랙트·DEX 유동성: DEX Screener
-- 언락 스케줄: TokenUnlocks / 프로젝트 공식 공지
-- 환율: exchangerate-api.com
+- **시총 / 24h 거래량 / 유통량 / 가격**: CoinGecko `/coins/markets` (multi-id 배치)
+- **DEX 유동성 / 풀**: DEX Screener `/tokens/{address}`
+- **김프 (빗썸 KRW)**: Bithumb public ticker (GitHub Actions 서버 사이드, CORS 우회)
+- **환율 USD/KRW**: open.er-api.com (fallback: frankfurter.app)
+- **언락 스케줄 / 컨트랙트 / 펀더멘털**: TokenUnlocks / 프로젝트 공식 공지 (정적, 수작업)
+
+### 갱신 주기
+- GitHub Actions cron `*/30 * * * *` (30분 주기)
+- `fetch_live_data.py` → `build_dashboard_v*.py` → diff 있을 때만 commit & push
+- 같은 배치 timestamp 만 사용 (Codex 가이드: "섞이면 stale 표시")
+- 갱신 상태 페이지 상단 subtitle 에 표시 (`🔄 데이터 N분 전 갱신`)
+
+### Secrets (GitHub repo)
+- `COINGECKO_API_KEY` (optional) — Demo 무료 키. 없어도 동작 (public limit)
 
 ## 보안
 

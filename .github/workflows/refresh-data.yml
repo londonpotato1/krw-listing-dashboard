@@ -1,0 +1,57 @@
+name: Refresh live data (30min)
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:        # 수동 트리거 허용
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch live data
+        env:
+          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+        run: |
+          python3 fetch_live_data.py
+
+      - name: Rebuild dashboards
+        run: |
+          python3 build_dashboard_v6.py
+          python3 build_dashboard_v7.py
+
+      - name: Commit & push (only if changed)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 데이터/HTML 만 add (다른 변경 무시)
+          git add dashboard_data_v6_verified.min.json \
+                  dashboard_data_v72_final.min.json \
+                  dashboard_v6.html \
+                  dashboard_v72_final.html
+          # diff 가 있을 때만 commit
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          # batch_ts 추출 (커밋 메시지용)
+          BATCH_TS=$(python3 -c "import json; d=json.loads(open('dashboard_data_v6_verified.min.json').read()); print(d['meta'].get('live',{}).get('batch_ts','?'))")
+          git commit -m "data: live refresh ${BATCH_TS}"
+          git push
