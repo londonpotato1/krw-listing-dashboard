@@ -48,6 +48,12 @@
   .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;
     display:flex;flex-direction:column;}
   .card:hover{border-color:var(--accent);}
+  .card.listed-out{opacity:0.45;filter:grayscale(0.6);}
+  .card.listed-out:hover{opacity:0.7;filter:grayscale(0.3);border-color:var(--border);}
+  .listed-out-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;
+    background:rgba(139,148,158,0.18);color:var(--muted);border:1px solid var(--muted);}
+  tr.row-listed-out{opacity:0.45;}
+  tr.row-listed-out:hover{opacity:0.75;}
 
   .card-header{padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;
     border-bottom:1px solid var(--border);}
@@ -270,9 +276,13 @@ function renderCompareTable() {
     const circPct = f.circ_pct != null ? f.circ_pct + '%' : '-';
     const mcap = m.market_cap_usd != null ? '$' + compactUsd.format(m.market_cap_usd) : '-';
     const dexLiq = m.dex_liquidity_usd != null ? '$' + compactUsd.format(m.dex_liquidity_usd) : '<span style="color:var(--muted)">-</span>';
-    return `<tr>
+    const rowCls = t.listed_on ? ' class="row-listed-out"' : '';
+    const symMark = t.listed_on
+      ? ` <span title="이미 상장 ${esc(t.listed_on)}" style="color:var(--muted);font-size:10px">📌${esc(t.listed_on)}</span>`
+      : ` ${t.bithumb_listed ? '✅' : '❌'}`;
+    return `<tr${rowCls}>
       <td class="rank-cell">#${f.rank ?? '-'}</td>
-      <td><b>${esc(t.symbol)}</b> ${t.bithumb_listed ? '✅' : '❌'} <span style="color:var(--muted)">${esc(t.korean)}</span></td>
+      <td><b>${esc(t.symbol)}</b>${symMark} <span style="color:var(--muted)">${esc(t.korean)}</span></td>
       <td>${group}</td>
       <td>${esc(f.category || '-')}</td>
       <td>${supply}</td>
@@ -367,15 +377,19 @@ function renderCard(t) {
     chartHtml = '<div class="chart-placeholder">빗썸 미상장 — 캔들 차트 없음</div>';
   }
 
-  return `<div class="card" id="card-${t.symbol}" data-symbol="${t.symbol}">
+  const listedOut = t.listed_on ? ' listed-out' : '';
+  const listedOutBadge = t.listed_on
+    ? `<span class="listed-out-badge">이미 상장 ${esc(t.listed_on)}</span>` : '';
+  return `<div class="card${listedOut}" id="card-${t.symbol}" data-symbol="${t.symbol}">
     <div class="card-header">
       <div class="card-title">
-        <h3>${t.symbol} <span style="color:var(--muted);font-weight:400;font-size:14px">${t.korean || ''}</span></h3>
-        <div class="kor">${f.category || ''}</div>
-        ${t.listing ? `<div class="listing">90일 시작 ${t.listing}</div>` : ''}
+        <h3>${esc(t.symbol)} <span style="color:var(--muted);font-weight:400;font-size:14px">${esc(t.korean || '')}</span></h3>
+        <div class="kor">${esc(f.category || '')}</div>
+        ${t.listing ? `<div class="listing">90일 시작 ${esc(t.listing)}</div>` : ''}
       </div>
       <div class="card-tags">
         <span class="rank-tag rank-${f.rank}">랭킹 ${f.rank}/10</span>
+        ${listedOutBadge}
         ${listedTag}
       </div>
     </div>
