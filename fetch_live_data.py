@@ -30,6 +30,16 @@ CHAIN_MAP = {
     'ton': ('the-open-network', 'ton'),
     'solana': ('solana', 'solana'),
 }
+# DefiLlama Coins API chain prefix
+DEFILLAMA_CHAIN = {
+    'ethereum': 'ethereum',
+    'binance-smart-chain': 'bsc', 'bsc': 'bsc',
+    'base': 'base',
+    'arbitrum': 'arbitrum',
+    'polygon': 'polygon',
+    'mantle': 'mantle',
+    'solana': 'solana',
+}
 
 def get_json(url, params=None, headers=None):
     if params:
@@ -59,6 +69,31 @@ def fetch_coingecko_markets(ids):
     return {c['id']: c for c in data}
 
 # ─────────────────────────────────────────────────────────────
+# DefiLlama Coins fallback (가격만, key 무필요, 무제한)
+# ─────────────────────────────────────────────────────────────
+def fetch_defillama_prices(contracts_list):
+    """contracts_list: [(chain, address), ...] → {(chain_lc, addr_lc): price_usd}"""
+    keys = []
+    rev = {}
+    for chain, addr in contracts_list:
+        c = DEFILLAMA_CHAIN.get((chain or '').lower())
+        if c and addr:
+            k = f"{c}:{addr}"
+            keys.append(k)
+            rev[k.lower()] = (chain.lower(), addr.lower())
+    if not keys:
+        return {}
+    try:
+        d = get_json(f'https://coins.llama.fi/prices/current/{",".join(keys)}')
+    except Exception:
+        return {}
+    result = {}
+    for k, v in (d.get('coins') or {}).items():
+        if 'price' in v:
+            result[rev.get(k.lower(), (None, None))] = v['price']
+    return result
+
+# ─────────────────────────────────────────────────────────────
 # DEX Screener: /tokens/{address} — chain 무관 multi-pair 응답
 # ─────────────────────────────────────────────────────────────
 def fetch_dex_screener(address):
@@ -69,7 +104,6 @@ def fetch_dex_screener(address):
     pairs = data.get('pairs') or []
     if not pairs:
         return None
-    # liquidity USD 가장 큰 풀 1개
     pairs.sort(key=lambda p: (p.get('liquidity') or {}).get('usd') or 0, reverse=True)
     top = pairs[0]
     return {
@@ -77,6 +111,7 @@ def fetch_dex_screener(address):
         'dex_top_pool': top.get('pairAddress'),
         'dex_chain': top.get('chainId'),
         'dex_dex': top.get('dexId'),
+        'price_usd': float(top['priceUsd']) if top.get('priceUsd') else None,  # CoinGecko fallback 용
     }
 
 # ─────────────────────────────────────────────────────────────
@@ -147,6 +182,22 @@ def process_file(path):
     except Exception as e:
         errors.append(f'coingecko_markets: {e}')
 
+    # 2a) CoinGecko 실패하거나 응답에 빠진 토큰 → DefiLlama 가격 fallback
+    missing_price = []
+    for t in tokens:
+        cg_id = t.get('coingecko_id')
+        if cg_id and cg_id in cg_data and cg_data[cg_id].get('current_price') is not None:
+            continue
+        for c in (t.get('meta_strip', {}).get('contracts') or []):
+            chain = c.get('chain'); addr = c.get('address')
+            if chain and addr:
+                missing_price.append((chain, addr, t['symbol']))
+    dll_prices = {}
+    if missing_price:
+        dll_prices = fetch_defillama_prices([(c, a) for c, a, _ in missing_price])
+        if dll_prices:
+            fields_meta['defillama_fallback_at'] = batch_ts
+
     fx_rate = payload['meta'].get('fx_rate')
 
     for t in tokens:
@@ -165,7 +216,14 @@ def process_file(path):
             if cg.get('fully_diluted_valuation') is not None:
                 m['fully_diluted_usd'] = cg['fully_diluted_valuation']
 
+        # 가격 우선순위: CoinGecko → DefiLlama → DEX Screener
         global_usd = cg.get('current_price') if cg else None
+        if global_usd is None:
+            for c in (m.get('contracts') or []):
+                key = ((c.get('chain') or '').lower(), (c.get('address') or '').lower())
+                if key in dll_prices:
+                    global_usd = dll_prices[key]
+                    break
         if global_usd is not None and t.get('fund', {}).get('kimchi'):
             t['fund']['kimchi']['global_usd'] = global_usd
 
@@ -180,6 +238,11 @@ def process_file(path):
                         m['dex_liquidity_usd'] = dex['dex_liquidity_usd']
                     if dex['dex_top_pool']:
                         m['dex_top_pool'] = dex['dex_top_pool']
+                    # 가격 마지막 fallback (CoinGecko + DefiLlama 모두 실패한 경우)
+                    if global_usd is None and dex.get('price_usd') is not None:
+                        global_usd = dex['price_usd']
+                        if t.get('fund', {}).get('kimchi'):
+                            t['fund']['kimchi']['global_usd'] = global_usd
 
         # Bithumb KRW (빗썸 상장 토큰만)
         if t.get('bithumb_listed'):
