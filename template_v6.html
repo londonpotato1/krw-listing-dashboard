@@ -75,6 +75,11 @@
   .mom-WEAK{background:rgba(239,83,80,0.12);color:var(--red);border:1px solid var(--red);}
   .mom-NEW{background:rgba(255,193,7,0.12);color:var(--gold);border:1px solid var(--gold);}
   .mom-FLAT{background:rgba(139,148,158,0.12);color:var(--muted);border:1px solid var(--muted);}
+  .tier-badge{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;border:1px solid;}
+  .tier-1{background:rgba(38,166,154,0.15);color:var(--green);border-color:var(--green);}
+  .tier-2{background:rgba(255,193,7,0.15);color:var(--gold);border-color:var(--gold);}
+  .tier-3{background:rgba(249,115,22,0.15);color:var(--orange);border-color:var(--orange);}
+  .tier-0{background:rgba(239,83,80,0.15);color:var(--red);border-color:var(--red);}
 
   .meta-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);
     border-bottom:1px solid var(--border);font-size:11px;}
@@ -441,8 +446,14 @@ function renderCards(sortKey) {
           <div class="listing">상장 ${t.listing}</div>
         </div>
         <div class="card-tags">
-          <span class="rank-tag rank-${f.rank}">Codex #${f.rank}</span>
+          ${f.rank != null
+            ? `<span class="rank-tag rank-${f.rank}">Codex #${f.rank}</span>`
+            : `<span class="rank-tag" style="background:var(--panel-2);color:var(--muted);border:1px solid var(--border)">Codex —</span>`}
           <span class="mom-tag mom-${tagName}">MOMENTUM ${tagName}</span>
+          ${f.source_tier != null ? (() => {
+            const labels = {1:'★ 1차 출처', 2:'★ 2차 출처', 3:'★ 3차 출처', 0:'⚠ 미검증'};
+            return `<span class="tier-badge tier-${f.source_tier}" title="${(f.source_tier_note||'').replace(/"/g,'&quot;')}">${labels[f.source_tier]||'?'}</span>`;
+          })() : ''}
         </div>
       </div>
       <div class="meta-strip">
@@ -454,7 +465,9 @@ function renderCards(sortKey) {
         <div class="meta-cell expandable" data-key="dex"><div class="lbl">DEX</div><div class="val">${meta.dex_liquidity_usd == null ? '-' : '$' + compactUsd.format(meta.dex_liquidity_usd)}</div></div>
       </div>
       ${criticalBanner}
-      <div class="rank-reason"><b>Codex #${f.rank}:</b> ${f.rank_reason || ''}</div>
+      ${f.rank != null
+        ? `<div class="rank-reason"><b>Codex #${f.rank}:</b> ${f.rank_reason || ''}</div>`
+        : (f.rank_reason ? `<div class="rank-reason"><b>미평가:</b> ${f.rank_reason}</div>` : '')}
       ${kimchiBanner}
       <div class="price-row">
         <div class="price-cell"><div class="lbl">상장가</div><div class="v">₩${fmtPrice(t.list_price)}</div></div>

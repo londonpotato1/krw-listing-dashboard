@@ -52,9 +52,16 @@ python3 build_dashboard_v7.py   # → dashboard_v72_final.html
 
 ### 갱신 주기
 - GitHub Actions cron `*/30 * * * *` (30분 주기)
-- `fetch_live_data.py` → `build_dashboard_v*.py` → diff 있을 때만 commit & push
+- 파이프라인: `fetch_live_data.py` → `classify_source_tier.py` → `build_dashboard_v*.py` → diff 있을 때만 commit & push
 - 같은 배치 timestamp 만 사용 (Codex 가이드: "섞이면 stale 표시")
 - 갱신 상태 페이지 상단 subtitle 에 표시 (`🔄 데이터 N분 전 갱신`)
+
+### Source Tier (출처 신뢰도 배지)
+각 토큰 fund 데이터의 sources 도메인을 자동 분류:
+- **Tier 1** (초록): 공식 docs/whitepaper/litepaper 또는 프로젝트 공식 도메인 인용
+- **Tier 2** (노랑): CoinGecko / CryptoRank / Tokenomist / CoinMarketCap / DefiLlama 같은 2차 출처
+- **Tier 3** (주황): Medium / 뉴스 기사 / 거래소 Academy 등 3차
+- **Tier 0** (빨강 ⚠ 미검증): 펀더멘털 텍스트에 "공식 docs 미확인" 또는 "잠정 평가" 마커 검출. 1차 출처 확보 후 재평가 대기 상태
 
 ### Secrets (GitHub repo)
 - `COINGECKO_API_KEY` (optional) — Demo 무료 키. 없어도 동작 (public limit)

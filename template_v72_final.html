@@ -80,6 +80,11 @@
   .rank-8,.rank-9,.rank-10{background:#26a69a;}
   .listed-tag{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(38,166,154,0.15);color:var(--green);border:1px solid var(--green);}
   .unlisted-tag{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(139,148,158,0.12);color:var(--muted);border:1px solid var(--muted);}
+  .tier-badge{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;border:1px solid;}
+  .tier-1{background:rgba(38,166,154,0.15);color:var(--green);border-color:var(--green);}
+  .tier-2{background:rgba(255,193,7,0.15);color:var(--gold);border-color:var(--gold);}
+  .tier-3{background:rgba(249,115,22,0.15);color:var(--orange);border-color:var(--orange);}
+  .tier-0{background:rgba(239,83,80,0.15);color:var(--red);border-color:var(--red);}
 
   .meta-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);
     border-bottom:1px solid var(--border);font-size:11px;}
@@ -438,7 +443,13 @@ function renderCard(t) {
         ${t.listing ? `<div class="listing">90일 시작 ${esc(t.listing)}</div>` : ''}
       </div>
       <div class="card-tags">
-        <span class="rank-tag rank-${f.rank}">랭킹 ${f.rank}/10</span>
+        ${f.rank != null
+          ? `<span class="rank-tag rank-${f.rank}">랭킹 ${f.rank}/10</span>`
+          : `<span class="rank-tag" style="background:var(--panel-2);color:var(--muted);border:1px solid var(--border)">랭킹 —</span>`}
+        ${f.source_tier != null ? (() => {
+          const labels = {1:'★ 1차 출처', 2:'★ 2차 출처', 3:'★ 3차 출처', 0:'⚠ 미검증'};
+          return `<span class="tier-badge tier-${f.source_tier}" title="${esc(f.source_tier_note || '')}">${labels[f.source_tier] || '?'}</span>`;
+        })() : ''}
         ${listedOutBadge}
         ${listedTag}
       </div>
@@ -452,7 +463,9 @@ function renderCard(t) {
       <div class="meta-cell expandable" data-key="dex"><div class="lbl">DEX</div><div class="val">${meta.dex_liquidity_usd == null ? '-' : '$' + compactUsd.format(meta.dex_liquidity_usd)}</div></div>
     </div>
     ${criticalBanner}
-    <div class="rank-reason"><b>랭킹 ${f.rank}:</b> ${f.rank_reason || ''}</div>
+    ${f.rank != null
+      ? `<div class="rank-reason"><b>랭킹 ${f.rank}:</b> ${esc(f.rank_reason || '')}</div>`
+      : (f.rank_reason ? `<div class="rank-reason"><b>미평가:</b> ${esc(f.rank_reason)}</div>` : '')}
     ${kimchiBanner}
     ${priceRow}
     ${athRow}
@@ -483,7 +496,14 @@ function renderCard(t) {
 function renderCategories() {
   const container = document.getElementById('categories');
   GROUPS.forEach(g => {
-    const groupTokens = DATA.filter(t => t.category_key === g.key);
+    const groupTokens = DATA.filter(t => t.category_key === g.key)
+      .sort((a, b) => {  // rank null 은 그룹 끝
+        const ra = a.fund?.rank, rb = b.fund?.rank;
+        if (ra == null && rb == null) return 0;
+        if (ra == null) return 1;
+        if (rb == null) return -1;
+        return ra - rb;
+      });
     if (groupTokens.length === 0) return;
     const section = document.createElement('div');
     section.className = 'category-section';

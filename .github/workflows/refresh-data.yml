@@ -32,6 +32,10 @@ jobs:
         run: |
           python3 fetch_live_data.py
 
+      - name: Classify source tiers
+        run: |
+          python3 classify_source_tier.py
+
       - name: Rebuild dashboards
         run: |
           python3 build_dashboard_v6.py
