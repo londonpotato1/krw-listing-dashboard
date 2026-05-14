@@ -195,10 +195,13 @@
 
 <h3 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 6px;">토큰 간 비교 (정렬 가능)</h3>
 <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.6;">
-  심볼 옆 마크 (<b>빗썸 KRW 마켓 기준</b>, 업비트 정보 별개):
-  <span style="color:var(--green)">✅ 빗썸 상장</span> ·
-  <span style="color:var(--red)">❌ 빗썸 미상장 (Binance/MEXC 등 해외 거래소만)</span> ·
-  <span style="color:var(--muted)">📌 빗썸 상장 완료일 (후보에서 제외, 흐리게 표시)</span>
+  <div>심볼 옆 마크 (<b>빗썸 KRW 마켓 기준</b>, 업비트 정보 별개):
+    <span style="color:var(--green)">✅ 빗썸 상장</span> ·
+    <span style="color:var(--red)">❌ 빗썸 미상장 (Binance/MEXC 등 해외 거래소만)</span> ·
+    <span style="color:var(--muted)">📌 빗썸 상장 완료일 (후보에서 제외, 흐리게 표시)</span></div>
+  <div style="margin-top:4px;">랭킹 #: <b>Codex 1~10 평가 척도 (동률 허용)</b>.
+    같은 #는 같은 평가 등급이며 출처 신뢰도(★) 순으로 표시.
+    <span style="color:var(--muted)">#- (평가 보류)</span> = 1차 출처 확보 후 재평가.</div>
 </div>
 <div class="compare-wrap">
 <table class="compare-table">
@@ -318,7 +321,17 @@ function renderCompareTable() {
       case 'chain':        return cmpStr(ca.chain_display || ca.chain, cb.chain_display || cb.chain);
       case 'contract':     return cmpStr(ca.address, cb.address);
       case 'dex_liquidity':return cmpNum(ma.dex_liquidity_usd, mb.dex_liquidity_usd);
-      default:             return cmpNum(a.fund.rank, b.fund.rank);
+      default: {
+        // rank primary (방향성 적용), tie-breaking 은 항상 ASC 고정 (Codex 권장).
+        // → rank DESC 시에도 동률 내 tier 우선순위 유지 (tier 1=공식이 항상 위).
+        const primary = cmpNum(a.fund.rank, b.fund.rank);
+        if (primary !== 0) return primary;
+        // tier=0 (미검증) / null = 99 (끝). tableSortDir 무관.
+        const ta = (a.fund?.source_tier == null || a.fund?.source_tier === 0) ? 99 : a.fund.source_tier;
+        const tb = (b.fund?.source_tier == null || b.fund?.source_tier === 0) ? 99 : b.fund.source_tier;
+        if (ta !== tb) return ta - tb;
+        return (a.symbol || '').localeCompare(b.symbol || '');
+      }
     }
   });
   document.getElementById('compareBody').innerHTML = sorted.map(t => {
@@ -343,7 +356,9 @@ function renderCompareTable() {
       ? ` <span title="빗썸 상장 완료: ${esc(t.listed_on)} — 더 이상 상장 후보 아님" style="color:var(--muted);font-size:10px">📌${esc(t.listed_on)}</span>`
       : ` <span title="${t.bithumb_listed ? '빗썸 KRW 마켓 상장됨 (한국 거래소)' : '빗썸 미상장 (해외 거래소만 거래 가능)'}">${t.bithumb_listed ? '✅' : '❌'}</span>`;
     return `<tr${rowCls}>
-      <td class="rank-cell">#${f.rank ?? '-'}</td>
+      <td class="rank-cell">${f.rank != null
+        ? `#${f.rank}`
+        : `<span title="1차 출처 미확보" style="color:var(--muted);font-weight:600">#- <span style="font-size:10px;font-weight:400">(평가 보류)</span></span>`}</td>
       <td><b>${esc(t.symbol)}</b>${symMark} <span style="color:var(--muted)">${esc(t.korean)}</span></td>
       <td>${esc(f.category || '-')}</td>
       <td>${supply}</td>
@@ -503,12 +518,17 @@ function renderCategories() {
   const container = document.getElementById('categories');
   GROUPS.forEach(g => {
     const groupTokens = DATA.filter(t => t.category_key === g.key)
-      .sort((a, b) => {  // rank null 은 그룹 끝
+      .sort((a, b) => {
+        // 비교 테이블 default 와 동일 tie-break: rank → tier → symbol (모두 ASC)
         const ra = a.fund?.rank, rb = b.fund?.rank;
-        if (ra == null && rb == null) return 0;
-        if (ra == null) return 1;
-        if (rb == null) return -1;
-        return ra - rb;
+        if (ra == null && rb == null) { /* fallthrough to tier */ }
+        else if (ra == null) return 1;
+        else if (rb == null) return -1;
+        else if (ra !== rb) return ra - rb;
+        const ta = (a.fund?.source_tier == null || a.fund?.source_tier === 0) ? 99 : a.fund.source_tier;
+        const tb = (b.fund?.source_tier == null || b.fund?.source_tier === 0) ? 99 : b.fund.source_tier;
+        if (ta !== tb) return ta - tb;
+        return (a.symbol || '').localeCompare(b.symbol || '');
       });
     if (groupTokens.length === 0) return;
     const section = document.createElement('div');
