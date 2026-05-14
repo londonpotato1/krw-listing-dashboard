@@ -145,6 +145,26 @@ def fetch_bithumb_krw(symbol):
     except Exception:
         return None
 
+def fetch_bithumb_candles(symbol):
+    try:
+        d = get_json(f'https://api.bithumb.com/public/candlestick/{symbol}_KRW/24h')
+        if d.get('status') != '0000':
+            return None
+        rows = d.get('data') or []
+        parsed = []
+        for row in rows:
+            if len(row) < 6:
+                continue
+            ts, open_, close, high, low, volume_base = row[:6]
+            day = datetime.datetime.utcfromtimestamp(int(ts) / 1000).strftime('%Y-%m-%d')
+            parsed.append((day, float(open_), float(high), float(low), float(close), float(volume_base)))
+        today = datetime.datetime.utcnow().strftime('%Y-%m-%d')
+        if parsed and parsed[-1][0] == today:
+            parsed = parsed[:-1]
+        return parsed[-90:] or None
+    except Exception:
+        return None
+
 # ─────────────────────────────────────────────────────────────
 # Upbit public ticker (서버 사이드)
 # ─────────────────────────────────────────────────────────────
@@ -290,7 +310,12 @@ def process_file(path):
                             t['fund']['kimchi']['global_usd'] = global_usd
 
         # Bithumb KRW (빗썸 상장 토큰만)
-        if t.get('bithumb_listed'):
+        is_bithumb = t.get('exchange') == 'bithumb'
+        if 'exchange' not in t:
+            is_bithumb = bool(t.get('bithumb_listed')) or any(
+                (x.get('identifier') == 'bithumb') for x in (m.get('cex_tickers_top5') or [])
+            )
+        if is_bithumb:
             kr = fetch_bithumb_krw(t['symbol'])
             if kr is not None and t.get('fund', {}).get('kimchi'):
                 t['fund']['kimchi']['bithumb_krw'] = kr
@@ -299,6 +324,27 @@ def process_file(path):
                     bithumb_usd_eq = kr / fx_rate
                     t['fund']['kimchi']['bithumb_usd_equiv'] = round(bithumb_usd_eq, 6)
                     t['fund']['kimchi']['kimchi_pct'] = round((bithumb_usd_eq / global_usd - 1) * 100, 2)
+            bithumb_candles = fetch_bithumb_candles(t['symbol'])
+            if bithumb_candles:
+                t['candles'] = [
+                    {'time': day, 'open': open_, 'high': high, 'low': low, 'close': close}
+                    for day, open_, high, low, close, _ in bithumb_candles
+                ]
+                t['volumes'] = [
+                    {
+                        'time': day,
+                        'value': int(volume_base * close),
+                        'color': '#26a69a' if close > open_ else '#ef5350',
+                    }
+                    for day, open_, _, _, close, volume_base in bithumb_candles
+                ]
+                ath_candle = max(t['candles'], key=lambda c: c['high'])
+                t['ath'] = ath_candle['high']
+                t['ath_day'] = ath_candle['time']
+                t['last_price'] = t['candles'][-1]['close']
+                if t.get('list_price'):
+                    t['from_listing'] = round((t['last_price'] / t['list_price'] - 1) * 100, 2)
+                t['from_ath'] = round((t['last_price'] / t['ath'] - 1) * 100, 2) if t.get('ath') else None
 
     # 마지막 성공 timestamp (배치 성공 시)
     if not errors:
