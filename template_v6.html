@@ -193,7 +193,12 @@
 <div class="subtitle">8개 토큰 · <span id="metaDate"></span> · 환율 <span id="metaFx"></span> · <span id="liveStatus" style="color:var(--muted);font-size:12px"></span></div>
 <div class="usdt-strip" id="usdtStrip"></div>
 
-<h3 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 8px;">📊 토큰 간 비교 (정렬 가능)</h3>
+<h3 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 6px;">📊 토큰 간 비교 (정렬 가능)</h3>
+<div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.6;">
+  심볼 옆 마크 (<b>빗썸 KRW 마켓 기준</b>):
+  <span style="color:var(--green)">✅ 빗썸 상장</span>
+  (v6 는 모두 빗썸 단독 KRW 상장 토큰)
+</div>
 <div class="compare-wrap">
 <table class="compare-table">
   <thead><tr id="compareHead">
@@ -349,7 +354,7 @@ function renderCompareTable() {
     const dexLiq = m.dex_liquidity_usd != null ? '$' + compactUsd.format(m.dex_liquidity_usd) : '<span style="color:var(--muted)">-</span>';
     return `<tr>
       <td class="rank-cell">#${f.rank}</td>
-      <td><b>${t.symbol}</b> <span style="color:var(--muted)">${t.korean}</span></td>
+      <td><b>${t.symbol}</b> <span title="빗썸 KRW 마켓 상장됨">✅</span> <span style="color:var(--muted)">${t.korean}</span></td>
       <td>${f.category || '-'}</td>
       <td>${supply}</td>
       <td>${f.circ_pct}%</td>

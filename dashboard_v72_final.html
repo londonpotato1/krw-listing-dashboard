@@ -193,7 +193,13 @@
 <div class="subtitle">9개 토큰 · 4 카테고리 · <span id="metaDate"></span> · 환율 <span id="metaFx"></span> · <span id="liveStatus" style="color:var(--muted);font-size:12px"></span></div>
 <div class="usdt-strip" id="usdtStrip"></div>
 
-<h3 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 8px;">토큰 간 비교 (정렬 가능)</h3>
+<h3 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 6px;">토큰 간 비교 (정렬 가능)</h3>
+<div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.6;">
+  심볼 옆 마크 (<b>빗썸 KRW 마켓 기준</b>, 업비트 정보 별개):
+  <span style="color:var(--green)">✅ 빗썸 상장</span> ·
+  <span style="color:var(--red)">❌ 빗썸 미상장 (Binance/MEXC 등 해외 거래소만)</span> ·
+  <span style="color:var(--muted)">📌 빗썸 상장 완료일 (후보에서 제외, 흐리게 표시)</span>
+</div>
 <div class="compare-wrap">
 <table class="compare-table">
   <thead><tr id="compareHead">
@@ -334,8 +340,8 @@ function renderCompareTable() {
     const dexLiq = m.dex_liquidity_usd != null ? '$' + compactUsd.format(m.dex_liquidity_usd) : '<span style="color:var(--muted)">-</span>';
     const rowCls = t.listed_on ? ' class="row-listed-out"' : '';
     const symMark = t.listed_on
-      ? ` <span title="이미 상장 ${esc(t.listed_on)}" style="color:var(--muted);font-size:10px">📌${esc(t.listed_on)}</span>`
-      : ` ${t.bithumb_listed ? '✅' : '❌'}`;
+      ? ` <span title="빗썸 상장 완료: ${esc(t.listed_on)} — 더 이상 상장 후보 아님" style="color:var(--muted);font-size:10px">📌${esc(t.listed_on)}</span>`
+      : ` <span title="${t.bithumb_listed ? '빗썸 KRW 마켓 상장됨 (한국 거래소)' : '빗썸 미상장 (해외 거래소만 거래 가능)'}">${t.bithumb_listed ? '✅' : '❌'}</span>`;
     return `<tr${rowCls}>
       <td class="rank-cell">#${f.rank ?? '-'}</td>
       <td><b>${esc(t.symbol)}</b>${symMark} <span style="color:var(--muted)">${esc(t.korean)}</span></td>
