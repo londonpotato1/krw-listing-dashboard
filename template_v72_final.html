@@ -189,7 +189,7 @@
 <div class="compare-wrap">
 <table class="compare-table">
   <thead><tr id="compareHead">
-    <th data-col="rank">#</th><th data-col="symbol">심볼</th><th data-col="group">그룹</th>
+    <th data-col="rank">#</th><th data-col="symbol">심볼</th>
     <th data-col="category">카테고리(산업)</th><th data-col="circ_supply">유통량</th>
     <th data-col="circ_pct">유통률</th><th data-col="market_cap">시총</th>
     <th data-col="chain">체인</th><th data-col="contract">컨트랙트</th>
@@ -297,7 +297,6 @@ function renderCompareTable() {
     const ca = (ma.contracts || [])[0] || {}, cb = (mb.contracts || [])[0] || {};
     switch (tableSortCol) {
       case 'symbol':       return cmpStr(a.symbol, b.symbol);
-      case 'group':        return cmpStr(a.category_key, b.category_key);
       case 'category':     return cmpStr(a.fund.category, b.fund.category);
       case 'circ_supply':  return cmpNum(ma.circulating_supply, mb.circulating_supply);
       case 'circ_pct':     return cmpNum(a.fund.circ_pct, b.fund.circ_pct);
@@ -313,7 +312,6 @@ function renderCompareTable() {
     const m = t.meta_strip || {};
     const contracts = m.contracts || [];
     const c0 = contracts[0];
-    const group = {candidate:'후보', insider:'인사이더', blue_chip:'블루칩', wildcard:'와일드카드'}[t.category_key] || t.category_key || '-';
     const chainCell = c0
       ? `${esc(c0.chain_display || c0.chain)}${contracts.length > 1 ? ` <span style="color:var(--muted);font-size:10px">+${contracts.length-1}</span>` : ''}`
       : '<span style="color:var(--muted)">자체 메인넷</span>';
@@ -333,7 +331,6 @@ function renderCompareTable() {
     return `<tr${rowCls}>
       <td class="rank-cell">#${f.rank ?? '-'}</td>
       <td><b>${esc(t.symbol)}</b>${symMark} <span style="color:var(--muted)">${esc(t.korean)}</span></td>
-      <td>${group}</td>
       <td>${esc(f.category || '-')}</td>
       <td>${supply}</td>
       <td>${circPct}</td>
