@@ -146,6 +146,42 @@ def fetch_bithumb_krw(symbol):
         return None
 
 # ─────────────────────────────────────────────────────────────
+# Upbit public ticker (서버 사이드)
+# ─────────────────────────────────────────────────────────────
+def fetch_upbit_krw(symbol):
+    try:
+        d = get_json('https://api.upbit.com/v1/ticker', {'markets': f'KRW-{symbol}'})
+        if isinstance(d, list) and d:
+            return float(d[0].get('trade_price') or 0) or None
+    except Exception:
+        return None
+    return None
+
+# ─────────────────────────────────────────────────────────────
+# USDT 시장 김프 (업비트 + 빗썸)
+# ─────────────────────────────────────────────────────────────
+def compute_usdt_market(fx_rate, batch_ts):
+    """meta.usdt 객체 반환. 실패 시 None (전체 stale 안 함, 해당 필드만 null)."""
+    if not fx_rate:
+        return None
+    upbit = fetch_upbit_krw('USDT')
+    bithumb = fetch_bithumb_krw('USDT')
+    if upbit is None and bithumb is None:
+        return None
+    def premium(krw): return None if krw is None else round((krw / fx_rate - 1) * 100, 2)
+    gap_krw = round(upbit - bithumb, 2) if (upbit is not None and bithumb is not None) else None
+    gap_pct = round((gap_krw / bithumb) * 100, 3) if (gap_krw is not None and bithumb) else None
+    return {
+        'upbit_krw': upbit,
+        'bithumb_krw': bithumb,
+        'upbit_premium_pct': premium(upbit),
+        'bithumb_premium_pct': premium(bithumb),
+        'exchange_gap_krw': gap_krw,
+        'exchange_gap_pct': gap_pct,
+        'updated_at': batch_ts,
+    }
+
+# ─────────────────────────────────────────────────────────────
 # 메인
 # ─────────────────────────────────────────────────────────────
 def process_file(path):
@@ -172,6 +208,15 @@ def process_file(path):
         fields_meta['fx_last_success_at'] = batch_ts
     else:
         errors.append('fx_rate')
+
+    # 1a) USDT 시장 김프 (업비트 + 빗썸) — 같은 batch_ts, 같은 fx_rate 사용
+    usdt = compute_usdt_market(payload['meta'].get('fx_rate'), batch_ts)
+    if usdt:
+        payload['meta']['usdt'] = usdt
+        fields_meta['usdt_last_success_at'] = batch_ts
+    else:
+        payload['meta']['usdt'] = None  # 부분 stale (전체는 유지)
+        errors.append('usdt_market')
 
     # 2) CoinGecko markets (multi-id 한 번에)
     cg_ids = [t['coingecko_id'] for t in tokens if t.get('coingecko_id')]

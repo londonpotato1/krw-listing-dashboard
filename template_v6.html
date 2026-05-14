@@ -16,7 +16,15 @@
     font-size:14px;line-height:1.5;}
   h1{margin:0 0 4px;font-size:26px;}
   h3{margin:0;}
-  .subtitle{color:var(--muted);margin-bottom:24px;font-size:13px;}
+  .subtitle{color:var(--muted);margin-bottom:8px;font-size:13px;}
+  .usdt-strip{display:flex;flex-wrap:wrap;gap:14px;padding:8px 12px;margin-bottom:16px;
+    background:var(--panel);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--muted);}
+  .usdt-strip .lbl{color:var(--muted);font-size:11px;margin-right:4px;text-transform:uppercase;letter-spacing:0.3px;}
+  .usdt-strip .v{font-weight:650;color:var(--text);}
+  .usdt-strip .sep{color:var(--border);}
+  .prem-pos{color:var(--orange);}    /* 김프 양수 = 한국 비쌈 */
+  .prem-neg{color:var(--accent);}    /* 역김프 = 한국 쌈 */
+  .prem-flat{color:var(--muted);}
 
   .compare-wrap{overflow-x:auto;margin-bottom:16px;}
   .compare-table{width:100%;background:var(--panel);min-width:880px;
@@ -175,6 +183,7 @@
 
 <h1>2026 빗썸 단독 KRW 신규상장 대시보드 <span style="color:var(--muted);font-size:14px">v6 · 빌드 시점 자동 검증 + 실측 환율</span></h1>
 <div class="subtitle">8개 토큰 · <span id="metaDate"></span> · 환율 <span id="metaFx"></span> · <span id="liveStatus" style="color:var(--muted);font-size:12px"></span></div>
+<div class="usdt-strip" id="usdtStrip"></div>
 
 <h3 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 8px;">📊 토큰 간 비교 (정렬 가능)</h3>
 <div class="compare-wrap">
@@ -216,6 +225,24 @@ const DIST_COLORS = ['#58a6ff','#26a69a','#ffc107','#f97316','#ef5350','#a78bfa'
 
 document.getElementById('metaDate').textContent = META.research_date;
 document.getElementById('metaFx').textContent = `USD/KRW ${META.fx_rate}`;
+
+// USDT 시장 김프 strip 렌더
+(function(){
+  const u = META.usdt;
+  const el = document.getElementById('usdtStrip');
+  if (!u) { el.innerHTML = '<span class="lbl">USDT 김프</span><span style="color:var(--muted)">데이터 없음</span>'; return; }
+  const premCls = p => p == null ? 'prem-flat' : (Math.abs(p) < 0.1 ? 'prem-flat' : (p > 0 ? 'prem-pos' : 'prem-neg'));
+  const fmtPct = p => p == null ? '-' : (p > 0 ? '+' : '') + p.toFixed(2) + '%';
+  const fmtKrw = v => v == null ? '-' : '₩' + v.toLocaleString('en-US', {minimumFractionDigits:1, maximumFractionDigits:1});
+  const fmtGap = v => v == null ? '-' : (v > 0 ? '+₩' : '−₩') + Math.abs(v).toFixed(1);
+  el.innerHTML = `
+    <span><span class="lbl">USDT 김프</span></span>
+    <span><span class="lbl">업비트</span><span class="v">${fmtKrw(u.upbit_krw)}</span> <span class="${premCls(u.upbit_premium_pct)}">${fmtPct(u.upbit_premium_pct)}</span></span>
+    <span class="sep">·</span>
+    <span><span class="lbl">빗썸</span><span class="v">${fmtKrw(u.bithumb_krw)}</span> <span class="${premCls(u.bithumb_premium_pct)}">${fmtPct(u.bithumb_premium_pct)}</span></span>
+    <span class="sep">·</span>
+    <span><span class="lbl">거래소 갭</span><span class="${premCls(u.exchange_gap_pct)}">${fmtGap(u.exchange_gap_krw)}</span> <span class="${premCls(u.exchange_gap_pct)}">(${fmtPct(u.exchange_gap_pct)})</span></span>`;
+})();
 
 // 실시간 데이터 갱신 상태 (GitHub Actions 30분 cron)
 (function(){
