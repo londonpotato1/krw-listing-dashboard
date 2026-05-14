@@ -39,6 +39,13 @@
   .compare-table th:nth-child(3), .compare-table td:nth-child(3){
     width:160px;max-width:160px;min-width:120px;
     white-space:normal;word-break:keep-all;line-height:1.35;}
+  .compare-table td.mcap-cell{padding:6px 10px;}
+  .mcap-cell .mc{font-size:14px;font-weight:700;color:var(--accent);}
+  .mcap-cell .fdv{font-size:10px;color:var(--muted);margin-top:2px;}
+  .compare-table td.supply-cell{font-size:13px;font-weight:700;color:var(--text);}
+  .compare-table td.chain-cell .chip-chain{display:inline-block;padding:2px 8px;
+    background:var(--panel-2);border:1px solid var(--border);border-radius:4px;
+    font-size:12px;font-weight:600;color:var(--text);}
 
   .category-section{margin-bottom:24px;}
   .category-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 14px;
@@ -340,8 +347,8 @@ function renderCompareTable() {
     const contracts = m.contracts || [];
     const c0 = contracts[0];
     const chainCell = c0
-      ? `${esc(c0.chain_display || c0.chain)}${contracts.length > 1 ? ` <span style="color:var(--muted);font-size:10px">+${contracts.length-1}</span>` : ''}`
-      : '<span style="color:var(--muted)">자체 메인넷</span>';
+      ? `<span class="chip-chain">${esc(c0.chain_display || c0.chain)}</span>${contracts.length > 1 ? ` <span style="color:var(--muted);font-size:10px">+${contracts.length-1}</span>` : ''}`
+      : '<span class="chip-chain" style="color:var(--muted)">자체 메인넷</span>';
     const contractCell = c0
       ? (c0.explorer_url
           ? `<a href="${safeUrl(c0.explorer_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:none">${esc(shortAddr(c0.address))}↗</a>`
@@ -349,7 +356,11 @@ function renderCompareTable() {
       : '<span style="color:var(--muted)">-</span>';
     const supply = m.circulating_supply != null ? compactNum.format(m.circulating_supply) : '-';
     const circPct = f.circ_pct != null ? f.circ_pct + '%' : '-';
-    const mcap = m.market_cap_usd != null ? '$' + compactUsd.format(m.market_cap_usd) : '-';
+    // 시총 셀 2줄: MC + FDV (FDV null 시 줄 자체 생략)
+    const mcStr = m.market_cap_usd != null ? '$' + compactUsd.format(m.market_cap_usd) : '-';
+    const fdvLine = m.fully_diluted_usd != null
+      ? `<div class="fdv">FDV $${compactUsd.format(m.fully_diluted_usd)}</div>` : '';
+    const mcapCell = `<div class="mc">${mcStr}</div>${fdvLine}`;
     const dexLiq = m.dex_liquidity_usd != null ? '$' + compactUsd.format(m.dex_liquidity_usd) : '<span style="color:var(--muted)">-</span>';
     const rowCls = t.listed_on ? ' class="row-listed-out"' : '';
     const symMark = t.listed_on
@@ -361,10 +372,10 @@ function renderCompareTable() {
         : `<span title="1차 출처 미확보" style="color:var(--muted);font-weight:600">#- <span style="font-size:10px;font-weight:400">(평가 보류)</span></span>`}</td>
       <td><b>${esc(t.symbol)}</b>${symMark} <span style="color:var(--muted)">${esc(t.korean)}</span></td>
       <td>${esc(f.category || '-')}</td>
-      <td>${supply}</td>
+      <td class="supply-cell">${supply}</td>
       <td>${circPct}</td>
-      <td>${mcap}</td>
-      <td>${chainCell}</td>
+      <td class="mcap-cell">${mcapCell}</td>
+      <td class="chain-cell">${chainCell}</td>
       <td>${contractCell}</td>
       <td>${dexLiq}</td>
     </tr>`;

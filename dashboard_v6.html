@@ -38,6 +38,13 @@
   .compare-table th:nth-child(3), .compare-table td:nth-child(3){
     width:120px;max-width:120px;min-width:80px;
     white-space:normal;word-break:keep-all;line-height:1.35;}
+  .compare-table td.mcap-cell{padding:6px 10px;}
+  .mcap-cell .mc{font-size:14px;font-weight:700;color:var(--accent);}
+  .mcap-cell .fdv{font-size:10px;color:var(--muted);margin-top:2px;}
+  .compare-table td.supply-cell{font-size:13px;font-weight:700;color:var(--text);}
+  .compare-table td.chain-cell .chip-chain{display:inline-block;padding:2px 8px;
+    background:var(--panel-2);border:1px solid var(--border);border-radius:4px;
+    font-size:12px;font-weight:600;color:var(--text);}
 
   .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;
     background:var(--panel);padding:10px 14px;border-radius:8px;border:1px solid var(--border);}
@@ -342,24 +349,27 @@ function renderCompareTable() {
     const contracts = m.contracts || [];
     const c0 = contracts[0];
     const chainCell = c0
-      ? `${c0.chain_display || c0.chain}${contracts.length > 1 ? ` <span style="color:var(--muted);font-size:10px">+${contracts.length-1}</span>` : ''}`
-      : '<span style="color:var(--muted)">자체 메인넷</span>';
+      ? `<span class="chip-chain">${esc(c0.chain_display || c0.chain)}</span>${contracts.length > 1 ? ` <span style="color:var(--muted);font-size:10px">+${contracts.length-1}</span>` : ''}`
+      : '<span class="chip-chain" style="color:var(--muted)">자체 메인넷</span>';
     const contractCell = c0
       ? (c0.explorer_url
           ? `<a href="${safeUrl(c0.explorer_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:none">${esc(shortAddr(c0.address))}↗</a>`
-          : `<code style="font-size:11px">${shortAddr(c0.address)}</code>`)
+          : `<code style="font-size:11px">${esc(shortAddr(c0.address))}</code>`)
       : '<span style="color:var(--muted)">-</span>';
     const supply = m.circulating_supply != null ? compactNum.format(m.circulating_supply) : '-';
-    const mcap = m.market_cap_usd != null ? '$' + compactUsd.format(m.market_cap_usd) : '-';
+    const mcStr = m.market_cap_usd != null ? '$' + compactUsd.format(m.market_cap_usd) : '-';
+    const fdvLine = m.fully_diluted_usd != null
+      ? `<div class="fdv">FDV $${compactUsd.format(m.fully_diluted_usd)}</div>` : '';
+    const mcapCell = `<div class="mc">${mcStr}</div>${fdvLine}`;
     const dexLiq = m.dex_liquidity_usd != null ? '$' + compactUsd.format(m.dex_liquidity_usd) : '<span style="color:var(--muted)">-</span>';
     return `<tr>
       <td class="rank-cell">#${f.rank}</td>
-      <td><b>${t.symbol}</b> <span title="빗썸 KRW 마켓 상장됨">✅</span> <span style="color:var(--muted)">${t.korean}</span></td>
-      <td>${f.category || '-'}</td>
-      <td>${supply}</td>
-      <td>${f.circ_pct}%</td>
-      <td>${mcap}</td>
-      <td>${chainCell}</td>
+      <td><b>${esc(t.symbol)}</b> <span title="빗썸 KRW 마켓 상장됨">✅</span> <span style="color:var(--muted)">${esc(t.korean || '')}</span></td>
+      <td>${esc(f.category || '-')}</td>
+      <td class="supply-cell">${supply}</td>
+      <td>${f.circ_pct != null ? f.circ_pct + '%' : '-'}</td>
+      <td class="mcap-cell">${mcapCell}</td>
+      <td class="chain-cell">${chainCell}</td>
       <td>${contractCell}</td>
       <td>${dexLiq}</td>
     </tr>`;
