@@ -513,8 +513,12 @@ function renderCategories() {
         timeScale:{borderColor:'#30363d', timeVisible:false},
         crosshair:{mode:0}, autoSize:true,
       });
-      const ls = chart.addLineSeries({color:'#58a6ff', lineWidth:2});
-      ls.setData(t.candles);
+      const cs = chart.addCandlestickSeries({
+        upColor:'#26a69a', downColor:'#ef5350',
+        borderUpColor:'#26a69a', borderDownColor:'#ef5350',
+        wickUpColor:'#26a69a', wickDownColor:'#ef5350',
+      });
+      cs.setData(t.candles);
       const vs = chart.addHistogramSeries({priceFormat:{type:'volume'}, priceScaleId:'vol', color:'#26a69a'});
       vs.priceScale().applyOptions({scaleMargins:{top:0.8, bottom:0}});
       vs.setData(t.volumes);
